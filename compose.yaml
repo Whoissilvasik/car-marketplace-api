@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: car-marketplace-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-carmarketplace}
+      POSTGRES_USER: ${POSTGRES_USER:-carmarketplace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carmarketplace}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - car-net
+
+  app:
+    build: .
+    container_name: car-marketplace-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-carmarketplace}
+      DB_USERNAME: ${POSTGRES_USER:-carmarketplace}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-carmarketplace}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: on-failure
+    networks:
+      - car-net
+
+volumes:
+  pgdata:
+
+networks:
+  car-net:
